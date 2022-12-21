@@ -13,14 +13,6 @@ camera.set(10, 200)
 
 fgbg = cv.createBackgroundSubtractorMOG2(0,50)
 
-def gammaCorrection(src, gamma):
-    invGamma = 1 / gamma
-
-    table = [((i / 255) ** invGamma) * 255 for i in range(256)]
-    table = np.array(table, np.uint8)
-
-    return cv.LUT(src, table)
-
 def nothing(x):
     pass
 
@@ -28,55 +20,49 @@ def setMaskTrackbar():
     cv.namedWindow("Settings")
     cv.resizeWindow("Settings", 640, 250)
 
-    cv.createTrackbar("Y Low", "Settings", 16, 235, nothing)
-    cv.createTrackbar("Y Up", "Settings", 16, 235, nothing)
-    cv.createTrackbar("Cr Low", "Settings", 16, 240, nothing)
-    cv.createTrackbar("Cr Up", "Settings", 16, 240, nothing)
-    cv.createTrackbar("Cb Low", "Settings", 16, 240, nothing)
-    cv.createTrackbar("Cb Up", "Settings", 16, 240, nothing)
+    cv.createTrackbar("Y Low", "Settings", 0, 255, nothing)
+    cv.createTrackbar("Y Up", "Settings", 0, 255, nothing)
+    cv.createTrackbar("Cr Low", "Settings", 0, 255, nothing)
+    cv.createTrackbar("Cr Up", "Settings", 0, 255, nothing)
+    cv.createTrackbar("Cb Low", "Settings", 0, 255, nothing)
+    cv.createTrackbar("Cb Up", "Settings", 0, 255, nothing)
 
-    cv.setTrackbarPos("Y Low", "Settings", 16)
-    cv.setTrackbarPos("Y Up", "Settings", 235)
-    cv.setTrackbarPos("Cr Low", "Settings", 16)
-    cv.setTrackbarPos("Cr Up", "Settings", 240)
-    cv.setTrackbarPos("Cb Low", "Settings", 16)
-    cv.setTrackbarPos("Cb Up", "Settings", 240)
+    cv.setTrackbarPos("Y Low", "Settings", 0)
+    cv.setTrackbarPos("Y Up", "Settings", 255)
+    cv.setTrackbarPos("Cr Low", "Settings", 133)
+    cv.setTrackbarPos("Cr Up", "Settings", 173)
+    cv.setTrackbarPos("Cb Low", "Settings", 77)
+    cv.setTrackbarPos("Cb Up", "Settings", 127)
 
-
-
-def histogram(img):
-    # roi = firstFrame[r:r+h, c:c+w]
-
+def getMaskTrackbar():
     yl = cv.getTrackbarPos("Y Low", "Settings")
     yu = cv.getTrackbarPos("Y Up", "Settings")
     crl = cv.getTrackbarPos("Cr Low", "Settings")
     cru = cv.getTrackbarPos("Cr Up", "Settings")
     cbl = cv.getTrackbarPos("Cb Low", "Settings")
     cbu = cv.getTrackbarPos("Cb Up", "Settings")
+    return yl, yu,crl,cru,cbl,cbu
 
+def maskSkin(img,yl, yu, crl, cru, cbl, cbu):
     low = np.array([yl, crl, cbl])
     up = np.array([yu, cru, cbu])
 
-    mask = cv.inRange(img, low, up)
+    skinMask = cv.inRange(img, low, up)
     ker = np.ones((5, 5), np.uint8)
 
-    close = cv.morphologyEx(mask, cv.MORPH_CLOSE, ker)
-    dilate = cv.dilate(close, ker, iterations=1)
-    open = cv.morphologyEx(dilate, cv.MORPH_OPEN, ker)
+    skinMask = cv.morphologyEx(skinMask, cv.MORPH_CLOSE, ker)
+    skinMask = cv.dilate(skinMask, ker, iterations=1)
+    skinMask = cv.morphologyEx(skinMask, cv.MORPH_OPEN, ker)
     # Bilateral filtering in order to smooth the frame with the preserving of the edges
-    mask = cv.bilateralFilter(open, 5, 50, 100)
-    res = cv.bitwise_and(frame, frame, mask=mask)
+    skinMask = cv.bilateralFilter(skinMask, 5, 50, 100)
 
     cv.imshow("Original", img)
-    cv.imshow("Filter", res)
+    cv.imshow("skinMask", skinMask)
 
-    low = np.array([yl, crl, cbl])
-    up = np.array([yu, cru, cbu])
-    mask = cv.inRange(img, low, up)
-    cv.imshow("mask", mask)
-    hist = cv.calcHist([firstFrame], [0], mask, [180], [0,180])
-    cv.normalize(hist, hist, 0, 255, cv.NORM_MINMAX)
-    return [hist], mask
+
+    # hist = cv.calcHist([img], [0], histogramMask, [180], [0,180])
+    # cv.normalize(hist, hist, 0, 255, cv.NORM_MINMAX)
+    return skinMask
 
 def getMergedImageAfterEditingY(img_YCrCb):
 
@@ -84,9 +70,13 @@ def getMergedImageAfterEditingY(img_YCrCb):
     y, cr, cb = cv.split(img_YCrCb)
     #     cv.imshow("y", y)
 
-    # Equalizing histogram of the y channel to effectively spread out the most frequent intensity values of illumination
-    image_equ = cv.equalizeHist(y)
-    # cv.imshow("Image_equalized", Image_equ)
+    # # Equalizing histogram of the y channel to effectively spread out the most frequent intensity values of illumination
+    # image_equ = cv.equalizeHist(y)
+    # # cv.imshow("Image_equalized", Image_equ)
+
+    clahe = cv.createCLAHE(clipLimit=3)
+
+    image_equ = clahe.apply(y)
 
     # Getting back the image in the YCrCb space
     image_merge = cv.merge([image_equ, cr, cb])
@@ -95,25 +85,21 @@ def getMergedImageAfterEditingY(img_YCrCb):
 
 setMaskTrackbar()
 
+yl, yu, crl, cru, cbl, cbu = getMaskTrackbar()
+beg = True
 while(1):
     ret, frame = camera.read()
 
     frame = cv.flip(frame, 1)
-
-    # Converting from gbr to YCbCr color space
-    img_YCrCb = cv.cvtColor(frame, cv.COLOR_BGR2YCrCb)
-    # cv.imshow("img_YCrCb", img_YCrCb)
-
-    image_merge = getMergedImageAfterEditingY(img_YCrCb)
-
-    [hist], dst = histogram(image_merge)
-
-    # dst = cv.calcBackProject([image_merge], [0], hist, [0, 180], 1)
+    cv.imshow("original", frame)
 
     '''''
     ForegroundBackground model
     '''''
-    # cv.imshow("y", y)
+
+    # Converting from gbr to YCbCr color space
+    img_YCrCb = cv.cvtColor(frame, cv.COLOR_BGR2YCrCb)
+    # cv.imshow("img_YCrCb", img_YCrCb)
 
     # Bilateral filtering in order to smooth the frame with the preserving of the edges
     image_equ =cv.split(getMergedImageAfterEditingY(img_YCrCb))[0]
@@ -151,14 +137,30 @@ while(1):
         Skin model
     '''''
 
-    thresholdedSkin = cv.adaptiveThreshold(dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+
+    image_merge = getMergedImageAfterEditingY(img_YCrCb)
+
+    prevyl, prevyu, prevcrl, prevcru, prevcbl, prevcbu = yl, yu, crl, cru, cbl, cbu
+    yl, yu, crl, cru, cbl, cbu = getMaskTrackbar()
+
+    SkinMask = maskSkin(image_merge, yl, yu, crl, cru, cbl, cbu)
+
+    skin = cv.bitwise_and(image_merge, image_merge, mask = SkinMask)
+    cv.imshow("skin", skin)
+
+
+
+    skin =  cv.cvtColor(skin, cv.COLOR_YCrCb2BGR)
+    cv.imshow("bgrSkin", skin)
+    skin =  cv.cvtColor(skin, cv.COLOR_BGR2GRAY)
+    thresholdedSkin = cv.adaptiveThreshold( skin, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
                                           cv.THRESH_BINARY_INV, 15, 4)
-    cv.imshow('thresholdedSkin', thresholdedSkin)
-    #
-    # # Applying MORPH_OPEN then MORPH_CLOSE to enhance the skin mask
-    res = cv.morphologyEx(thresholdedSkin, cv.MORPH_OPEN, np.ones((3, 3), np.uint8))
-    res = cv.morphologyEx(thresholdedSkin, cv.MORPH_CLOSE, np.ones((7, 7), np.uint8))
-    cv.imshow("res", res)
+    # cv.imshow('thresholdedSkin', thresholdedSkin)
+
+    # Applying MORPH_ODPEN then MORPH_CLOSE to enhance the skin mask
+    thresholdedSkin = cv.morphologyEx(thresholdedSkin, cv.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    thresholdedSkin = cv.morphologyEx(thresholdedSkin, cv.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+    cv.imshow("thresholdedSkin", thresholdedSkin)
 
 
     #
@@ -167,7 +169,7 @@ while(1):
     # cv.imshow('edges', edges)
 
     # Non-skin Removal based on the skin mask on the ForegroundBackground model
-    skinForeground = cv.bitwise_or(dilation, res)
+    skinForeground = cv.bitwise_or(dilation, thresholdedSkin)
     cv.imshow('skinForeground', skinForeground)
 
 
