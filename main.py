@@ -1,3 +1,5 @@
+import math
+
 import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
@@ -83,6 +85,112 @@ def getMergedImageAfterEditingY(img_YCrCb):
     # cv.imshow('image_merge', image_merge)
     return image_merge
 
+def getMaxCon(rThresh):
+    contours, hierarchy = cv.findContours(rThresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    max_i = 0
+    max_area = -1
+    for i in range(len(contours)):
+        hand = contours[i]
+        area_hand = cv.contourArea(hand)
+        if area_hand > max_area:
+            max_area = area_hand
+            max_i = i
+    try:
+        hand = contours[max_i]
+        hull = cv.convexHull(hand)
+        drawing = np.zeros(frame.shape, np.uint8)
+        cv.drawContours(drawing, [hand], 0, (0, 255, 0), 2)
+        cv.drawContours(drawing, [hull], 0, (0, 0, 255), 3)
+        cv.imshow('output', drawing)
+    except:
+        contours = [0]
+        hand = contours[0]
+
+    return contours, hand
+
+def findFingers(res, max_con):
+    try:
+        hull = cv.convexHull(max_con, returnPoints = False)
+        defects = cv.convexityDefects(max_con, hull)
+        if defects is None:
+            defects = [0]
+            num_def = 0
+        else:
+            num_def = 0
+            for i in range(defects.shape[0]):
+                s,e,f,d = defects[i,0]
+                start = tuple(max_con[s][0])
+                end = tuple(max_con[e][0])
+                far = tuple(max_con[f][0])
+
+                a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
+                b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
+                c = math.sqrt((end[0] - far[0])**2 + (end[1] - far[1])**2)
+                s = (a+b+c)/2
+                ar = math.sqrt(s*(s-a)*(s-b)*(s-c))
+
+                d = (2*ar)/a
+
+                angle = math.acos((b**2 + c**2 - a**2) / (2*b*c)) * 57
+
+                if angle <= 90 and d > 30:
+                    num_def += 1
+                    cv.circle(res, far, 3, (255,255,0), -1)
+
+                cv.line(res, start, end, (0,255,255), 2)
+
+        return defects, num_def, res
+
+    except:
+        defects = [0]
+        num_def = 0
+
+        return defects, num_def, res
+
+
+def centroid(max_con):
+    moment = cv.moments(max_con)
+    if moment is None:
+        cx = 0
+        cy = 0
+
+        return cx, cy
+
+    else:
+        cx = 0
+        cy = 0
+        if moment["m00"] != 0:
+            cx = int(moment["m10"] / moment["m00"])
+            cy = int(moment["m01"] / moment["m00"])
+
+        return cx, cy
+
+def findFarPoint(res, cx, cy, defects, max_con):
+    try:
+        s = defects[:, 0][:, 0]
+
+        x = np.array(max_con[s][:, 0][:, 0], dtype=np.float)
+        y = np.array(max_con[s][:, 0][:, 1], dtype=np.float)
+
+        xp = cv.pow(cv.subtract(x, cx), 2)
+        yp = cv.pow(cv.subtract(y, cy), 2)
+
+        dist = cv.sqrt(cv.add(xp, yp))
+        dist_max_i = np.argmax(dist)
+
+        if dist_max_i < len(s):
+            farthest_defect = s[dist_max_i]
+            farthest_point = tuple(max_con[farthest_defect][0])
+
+        cv.line(res, (cx, cy), farthest_point, (0, 255, 255), 2)
+
+        return farthest_point, res
+
+    except:
+        farthest_point = 0
+
+        return farthest_point, res
+
 setMaskTrackbar()
 
 yl, yu, crl, cru, cbl, cbu = getMaskTrackbar()
@@ -148,8 +256,6 @@ while(1):
     skin = cv.bitwise_and(image_merge, image_merge, mask = SkinMask)
     cv.imshow("skin", skin)
 
-
-
     skin =  cv.cvtColor(skin, cv.COLOR_YCrCb2BGR)
     cv.imshow("bgrSkin", skin)
     skin =  cv.cvtColor(skin, cv.COLOR_BGR2GRAY)
@@ -166,7 +272,7 @@ while(1):
     #
     # FOR LATER USE
     # edges = cv.Canny(skin_mask, 100, 200)
-    # cv.imshow('edges', edges)
+    # # cv.imshow('edges', edges)
 
     # Non-skin Removal based on the skin mask on the ForegroundBackground model
     skinForeground = cv.bitwise_or(dilation, thresholdedSkin)
@@ -184,28 +290,22 @@ while(1):
 
     # Getting the contours and convex hull
     # skinMask1 = copy.deepcopy(image)
-    contours, hierarchy = cv.findContours(skinForeground, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    length = len(contours)
-    maxArea = -1
-    if length > 0:
-        for i in range(length):
-            temp = contours[i]
-            area = cv.contourArea(temp)
-            if area > maxArea:
-                maxArea = area
-                ci = i
-                res = contours[ci]
-                hull = cv.convexHull(res)
-                drawing = np.zeros(frame.shape, np.uint8)
-                cv.drawContours(drawing, [res], 0, (0, 255, 0), 2)
-                cv.drawContours(drawing, [hull], 0, (0, 0, 255), 3)
+    contours, hand = getMaxCon(skinForeground)
+    defects, num_def, res_frame = findFingers(frame, hand)
+    cx, cy = centroid(hand)
+    if np.all(contours[0] > 0):
+        cv.circle(res_frame, (cx, cy), 5, (0, 255, 0), 2)
+        cv.imshow("frameCopy",res_frame)
+    else:
+        pass
 
-                # isFinishCal, cnt = calculateFingers(res, drawing)
+    farthest_point, res_frame = findFarPoint(res_frame, cx, cy, defects, hand)
+    cv.imshow("farthest_point", res_frame)
+
+    # isFinishCal, cnt = calculateFingers(res, drawing)
                 # print
                 # "Fingers", cnt
-                cv.imshow('output', drawing)
-
-
+    #defects, num_def = findFingers(skinForeground, max_con)
 
     k = cv.waitKey(30) & 0xff
     if k == 27:
