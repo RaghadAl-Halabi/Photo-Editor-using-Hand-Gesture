@@ -48,6 +48,7 @@ camera = cv.VideoCapture(0)
 camera.set(10, 200)
 setMaskTrackbar()
 yl, yu, crl, cru, cbl, cbu = getMaskTrackbar()
+translate, rotate, scale, stop = False, False, False, False
 
 class Processing:
     def maskSkin(self, img, yl, yu, crl, cru, cbl, cbu):
@@ -223,57 +224,57 @@ class Processing:
 
             return farthest_point, res
 
-    def recognizeGestures(self, frame, num_def, count, farthest_point):
-        try:
-            print(num_def)
-            # if num_def == 1:
-            #     cv.putText(frame, "2", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
-            #     if count == 0:
-            #         mouse.release(Button.left)
-            #         mouse.position = (341, 82)
-            #         mouse.press(Button.left)
-            #         mouse.release(Button.left)
-            #         mouse.position = farthest_point
-            #         count = 1
-            #
-            # elif num_def == 2:
-            #     cv.putText(frame, "3", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
-            #     if count == 0:
-            #         mouse.release(Button.left)
-            #         mouse.position = (254, 106)
-            #         mouse.press(Button.left)
-            #         mouse.release(Button.left)
-            #         mouse.position = farthest_point
-            #         count = 1
-            #
-            # elif num_def == 3:
-            #     cv.putText(frame, "4", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
-            #     if count == 0:
-            #         mouse.release(Button.left)
-            #         mouse.position = (837, 69)
-            #         mouse.press(Button.left)
-            #         mouse.release(Button.left)
-            #         mouse.position = farthest_point
-            #         count = 1
-            #
-            # elif num_def == 4:
-            #     cv.putText(frame, "5", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
-            #     if count == 0:
-            #         mouse.release(Button.left)
-            #         mouse.position = (772, 69)
-            #         mouse.press(Button.left)
-            #         mouse.release(Button.left)
-            #         mouse.position = farthest_point
-            #         count = 1
-            #
-            # else:
-            #     cv.putText(frame, "1", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
-            #     mouse.position = farthest_point
-            #     mouse.press(Button.left)
-            #     count = 0
-
-        except:
-            print("You moved the hand too fast or take it out of range of vision of the camera")
+    # def recognizeGestures(self, frame, num_def, count, farthest_point):
+    #     try:
+    #         print(num_def)
+    #         # if num_def == 1:
+    #         #     cv.putText(frame, "2", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+    #         #     if count == 0:
+    #         #         mouse.release(Button.left)
+    #         #         mouse.position = (341, 82)
+    #         #         mouse.press(Button.left)
+    #         #         mouse.release(Button.left)
+    #         #         mouse.position = farthest_point
+    #         #         count = 1
+    #         #
+    #         # elif num_def == 2:
+    #         #     cv.putText(frame, "3", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+    #         #     if count == 0:
+    #         #         mouse.release(Button.left)
+    #         #         mouse.position = (254, 106)
+    #         #         mouse.press(Button.left)
+    #         #         mouse.release(Button.left)
+    #         #         mouse.position = farthest_point
+    #         #         count = 1
+    #         #
+    #         # elif num_def == 3:
+    #         #     cv.putText(frame, "4", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+    #         #     if count == 0:
+    #         #         mouse.release(Button.left)
+    #         #         mouse.position = (837, 69)
+    #         #         mouse.press(Button.left)
+    #         #         mouse.release(Button.left)
+    #         #         mouse.position = farthest_point
+    #         #         count = 1
+    #         #
+    #         # elif num_def == 4:
+    #         #     cv.putText(frame, "5", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+    #         #     if count == 0:
+    #         #         mouse.release(Button.left)
+    #         #         mouse.position = (772, 69)
+    #         #         mouse.press(Button.left)
+    #         #         mouse.release(Button.left)
+    #         #         mouse.position = farthest_point
+    #         #         count = 1
+    #         #
+    #         # else:
+    #         #     cv.putText(frame, "1", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+    #         #     mouse.position = farthest_point
+    #         #     mouse.press(Button.left)
+    #         #     count = 0
+    #
+    #     except:
+    #         print("You moved the hand too fast or take it out of range of vision of the camera")
 
     def skinModel(self, img_YCrCb, frame, yl, yu, crl, cru, cbl, cbu):
         image_merge = self.getMergedImageAfterEditingY(img_YCrCb)
@@ -355,9 +356,81 @@ class Processing:
 
         farthest_point, res_frame = self.findFarPoint(res_frame, cx, cy, defects, hand)
         # cv.imshow("farthest_point", res_frame)
+
+        if np.all(contours[0] > 0):
+            cv.circle(res_frame, (cx, cy), 5, (0, 255, 0), 2)
+        else:
+            pass
+        gestureOn = self.checkGestureOn()
+        if (not gestureOn):
+            translate, rotate, scale, stop = self.recognizeGestures(num_def)
+            translate, rotate, scale, stop = self.implementGesture(frame, hand, num_def)
         return res_frame
 
-        print("num_def", num_def)
+
+    def recognizeGestures(self, num_def):
+        t, r, s, st = translate, rotate, scale, stop
+        if num_def == 0:
+            t = False
+            r = False
+            s = False
+            st = True
+
+        if num_def == 2:
+            t = True
+            r = False
+            s = False
+            st = False
+
+        elif num_def == 3:
+            r = True
+            t = False
+            s = False
+            st = False
+
+        elif num_def == 4:
+            s = True
+            t = False
+            r = False
+            st = False
+
+        return t, r, s, st
+
+    def checkGestureOn(self):
+        if (translate):
+            return True
+        elif (rotate):
+            return True
+        elif (scale):
+            return True
+        else:
+            return False
+
+    def implementGesture(self, frame, hand, num_def):
+        tt, r, s, st = translate, rotate, scale, stop
+
+        try:
+            if translate:
+                t, r, s, st = self.recognizeGestures(num_def)
+                if (st): return t, r, s, st
+                cv.putText(frame, "2", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv.LINE_AA)
+
+            elif rotate:
+                t, r, s, st = self.recognizeGestures(num_def)
+                if (st): return t, r, s, st
+                cv.putText(frame, "3", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv.LINE_AA)
+
+            elif scale:
+                t, r, s, st = self.recognizeGestures(num_def)
+                if (st): return t, r, s, st
+                cv.putText(frame, "4", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv.LINE_AA)
+
+            else: return t, r, s, st
+            return t, r, s, st
+
+        except:
+            print("You moved the hand too fast or take it out of range of vision of the camera")
+            return t, r, s, st
 
 class FrontEnd(customtkinter.CTk):
     def splash_screen(self):
@@ -537,6 +610,7 @@ class FrontEnd(customtkinter.CTk):
 
         # Getting the contours and convex hull
         result = self.processing.preparePreGesturesProcessing(skinForegroundModel, frame)
+
 
         ''' 
             عرض الفريم على الواجهة
