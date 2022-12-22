@@ -76,9 +76,12 @@ def getMergedImageAfterEditingY(img_YCrCb):
     # image_equ = cv.equalizeHist(y)
     # # cv.imshow("Image_equalized", Image_equ)
 
+    # Bilateral filtering in order to smooth the frame with the preserving of the edges
+    blur = cv.bilateralFilter(y, 5, 50, 100)
+
     clahe = cv.createCLAHE(clipLimit=3)
 
-    image_equ = clahe.apply(y)
+    image_equ = clahe.apply(blur)
 
     # Getting back the image in the YCrCb space
     image_merge = cv.merge([image_equ, cr, cb])
@@ -86,7 +89,7 @@ def getMergedImageAfterEditingY(img_YCrCb):
     return image_merge
 
 def getMaxCon(rThresh):
-    contours, hierarchy = cv.findContours(rThresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv.findContours(rThresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     max_i = 0
     max_area = -1
     for i in range(len(contours)):
@@ -99,6 +102,32 @@ def getMaxCon(rThresh):
         hand = contours[max_i]
         hull = cv.convexHull(hand)
         drawing = np.zeros(frame.shape, np.uint8)
+
+        # draw the shape of the contour on the output image, compute the
+        # bounding box, and display the number of points in the contour
+        # cv.drawContours(output, [hand], -1, (0, 255, 0), 3)
+        (x, y, w, h) = cv.boundingRect(hand)
+        # text = "original, num_pts={}".format(len(hand))
+        # cv.putText(output, text, (x, y - 15), cv.FONT_HERSHEY_SIMPLEX,
+        #             0.9, (0, 255, 0), 2)
+
+        # to demonstrate the impact of contour approximation, let's loop
+        # over a number of epsilon sizes
+
+        # approximate the contour
+        peri = cv.arcLength(hand, True)
+        approx = cv.approxPolyDP(hand, 0.0064 * peri, True)
+
+        # draw the approximated contour on the image
+        output = drawing.copy()
+        cv.drawContours(output, [approx], -1, (0, 255, 0), 3)
+        # text = "eps={:.4f}, num_pts={}".format(0.05, len(approx))
+        # cv.putText(output, text, (x, y - 15), cv.FONT_HERSHEY_SIMPLEX,
+        #             0.9, (0, 255, 0), 2)
+        # show the approximated contour image
+        # print("[INFO] {}".format(text))
+        cv.imshow("Approximated Contour", output)
+
         cv.drawContours(drawing, [hand], 0, (0, 255, 0), 2)
         cv.drawContours(drawing, [hull], 0, (0, 0, 255), 3)
         cv.imshow('output', drawing)
@@ -147,7 +176,6 @@ def findFingers(res, max_con):
 
         return defects, num_def, res
 
-
 def centroid(max_con):
     moment = cv.moments(max_con)
     if moment is None:
@@ -191,6 +219,59 @@ def findFarPoint(res, cx, cy, defects, max_con):
 
         return farthest_point, res
 
+def recognizeGestures(frame, num_def, count, farthest_point):
+    try:
+        print(num_def)
+        # if num_def == 1:
+        #     cv.putText(frame, "2", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+        #     if count == 0:
+        #         mouse.release(Button.left)
+        #         mouse.position = (341, 82)
+        #         mouse.press(Button.left)
+        #         mouse.release(Button.left)
+        #         mouse.position = farthest_point
+        #         count = 1
+        #
+        # elif num_def == 2:
+        #     cv.putText(frame, "3", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+        #     if count == 0:
+        #         mouse.release(Button.left)
+        #         mouse.position = (254, 106)
+        #         mouse.press(Button.left)
+        #         mouse.release(Button.left)
+        #         mouse.position = farthest_point
+        #         count = 1
+        #
+        # elif num_def == 3:
+        #     cv.putText(frame, "4", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+        #     if count == 0:
+        #         mouse.release(Button.left)
+        #         mouse.position = (837, 69)
+        #         mouse.press(Button.left)
+        #         mouse.release(Button.left)
+        #         mouse.position = farthest_point
+        #         count = 1
+        #
+        # elif num_def == 4:
+        #     cv.putText(frame, "5", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+        #     if count == 0:
+        #         mouse.release(Button.left)
+        #         mouse.position = (772, 69)
+        #         mouse.press(Button.left)
+        #         mouse.release(Button.left)
+        #         mouse.position = farthest_point
+        #         count = 1
+        #
+        # else:
+        #     cv.putText(frame, "1", (0,50), cv.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3, cv.LINE_AA)
+        #     mouse.position = farthest_point
+        #     mouse.press(Button.left)
+        #     count = 0
+
+    except:
+        print("You moved the hand too fast or take it out of range of vision of the camera")
+
+
 setMaskTrackbar()
 
 yl, yu, crl, cru, cbl, cbu = getMaskTrackbar()
@@ -201,26 +282,51 @@ while(1):
     frame = cv.flip(frame, 1)
     cv.imshow("original", frame)
 
-    '''''
-    ForegroundBackground model
-    '''''
-
     # Converting from gbr to YCbCr color space
     img_YCrCb = cv.cvtColor(frame, cv.COLOR_BGR2YCrCb)
     # cv.imshow("img_YCrCb", img_YCrCb)
 
-    # Bilateral filtering in order to smooth the frame with the preserving of the edges
-    image_equ =cv.split(getMergedImageAfterEditingY(img_YCrCb))[0]
-    blur = cv.bilateralFilter(image_equ, 5, 50, 100)
+    '''''
+        Skin model
+    '''''
+    image_merge = getMergedImageAfterEditingY(img_YCrCb)
+
+    prevyl, prevyu, prevcrl, prevcru, prevcbl, prevcbu = yl, yu, crl, cru, cbl, cbu
+    yl, yu, crl, cru, cbl, cbu = getMaskTrackbar()
+
+    skinMask = maskSkin(image_merge, yl, yu, crl, cru, cbl, cbu)
+
+    skin = cv.bitwise_and(frame, frame, mask = skinMask)
+    cv.imshow("skin", skin)
+
+    # thresholdedSkin = cv.adaptiveThreshold( skin, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+    #                                       cv.THRESH_BINARY_INV, 15, 4)
+    # # cv.imshow('thresholdedSkin', thresholdedSkin)
+    #
+    # Applying MORPH_ODPEN then MORPH_CLOSE to enhance the skin mask
+    skinMask = cv.morphologyEx(skinMask, cv.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    skinMask = cv.morphologyEx(skinMask, cv.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+    # cv.imshow("thresholdedSkin", thresholdedSkin)
+    #
+    # FOR LATER USE
+    # edges = cv.Canny(skin_mask, 100, 200)
+    # # cv.imshow('edges', edges)
+
+    '''''
+        Not fixed ForegroundBackground model
+    '''''
 
     # Adaptive thresholding in order to give better results for videos with varying illumination
-    thresholdedImg = cv.adaptiveThreshold(blur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                    cv.THRESH_BINARY_INV, 15, 3)
+    thresholdedImg = cv.adaptiveThreshold(skinMask, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                          cv.THRESH_BINARY_INV, 15, 3)
     # cv.imshow('thresholdedImg', thresholdedImg)
+
+    thresholdedImg = cv.morphologyEx(thresholdedImg, cv.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    cv.imshow('thresholdedImg', thresholdedImg)
 
     # Background Removal based on the moving objects
     fgbg.setDetectShadows(False)
-    fgmask = fgbg.apply(thresholdedImg , 0)
+    fgmask = fgbg.apply(thresholdedImg, 0.05)
     foreground = cv.bitwise_and(thresholdedImg, thresholdedImg, mask=fgmask)
     # cv.imshow('foreground', foreground)
 
@@ -241,43 +347,9 @@ while(1):
     # dilationc = cv.drawContours(dilation, contours1, -1, (0, 255, 0), 1)
     # cv.imshow('dilationc', dilationc)
 
-    '''''
-        Skin model
-    '''''
-
-
-    image_merge = getMergedImageAfterEditingY(img_YCrCb)
-
-    prevyl, prevyu, prevcrl, prevcru, prevcbl, prevcbu = yl, yu, crl, cru, cbl, cbu
-    yl, yu, crl, cru, cbl, cbu = getMaskTrackbar()
-
-    SkinMask = maskSkin(image_merge, yl, yu, crl, cru, cbl, cbu)
-
-    skin = cv.bitwise_and(image_merge, image_merge, mask = SkinMask)
-    cv.imshow("skin", skin)
-
-    skin =  cv.cvtColor(skin, cv.COLOR_YCrCb2BGR)
-    cv.imshow("bgrSkin", skin)
-    skin =  cv.cvtColor(skin, cv.COLOR_BGR2GRAY)
-    thresholdedSkin = cv.adaptiveThreshold( skin, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                          cv.THRESH_BINARY_INV, 15, 4)
-    # cv.imshow('thresholdedSkin', thresholdedSkin)
-
-    # Applying MORPH_ODPEN then MORPH_CLOSE to enhance the skin mask
-    thresholdedSkin = cv.morphologyEx(thresholdedSkin, cv.MORPH_OPEN, np.ones((3, 3), np.uint8))
-    thresholdedSkin = cv.morphologyEx(thresholdedSkin, cv.MORPH_CLOSE, np.ones((7, 7), np.uint8))
-    cv.imshow("thresholdedSkin", thresholdedSkin)
-
-
-    #
-    # FOR LATER USE
-    # edges = cv.Canny(skin_mask, 100, 200)
-    # # cv.imshow('edges', edges)
-
     # Non-skin Removal based on the skin mask on the ForegroundBackground model
-    skinForeground = cv.bitwise_or(dilation, thresholdedSkin)
+    skinForeground = cv.bitwise_and(dilation, skinMask)
     cv.imshow('skinForeground', skinForeground)
-
 
     # contours1, _ = cv.findContours(skinForeground, cv.RETR_TREE,
     #                                cv.CHAIN_APPROX_SIMPLE)
@@ -288,6 +360,7 @@ while(1):
     #                    )
     # cv.imshow('image', image)
 
+
     # Getting the contours and convex hull
     # skinMask1 = copy.deepcopy(image)
     contours, hand = getMaxCon(skinForeground)
@@ -295,17 +368,15 @@ while(1):
     cx, cy = centroid(hand)
     if np.all(contours[0] > 0):
         cv.circle(res_frame, (cx, cy), 5, (0, 255, 0), 2)
-        cv.imshow("frameCopy",res_frame)
     else:
         pass
 
     farthest_point, res_frame = findFarPoint(res_frame, cx, cy, defects, hand)
     cv.imshow("farthest_point", res_frame)
 
-    # isFinishCal, cnt = calculateFingers(res, drawing)
-                # print
-                # "Fingers", cnt
-    #defects, num_def = findFingers(skinForeground, max_con)
+    print("num_def", num_def)
+
+
 
     k = cv.waitKey(30) & 0xff
     if k == 27:

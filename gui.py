@@ -42,8 +42,8 @@ class FrontEnd(customtkinter.CTk):
         label2.place(x=10, y=215)
 
         # making animation
-        image_a = ImageTk.PhotoImage(Image.open('D://nlp projects/cvproject/img/c2.png'))
-        image_b = ImageTk.PhotoImage(Image.open('D://nlp projects/cvproject/img/c1.png'))
+        image_a = ImageTk.PhotoImage(Image.open('img/c2.png'))
+        image_b = ImageTk.PhotoImage(Image.open('img/c1.png'))
 
         for i in range(5):
             l1 = Label(w, image=image_a, border=0, relief='sunken').place(x=180, y=145)
@@ -82,7 +82,7 @@ class FrontEnd(customtkinter.CTk):
         super().__init__()
         # configure window
         self.title("Photo Editor")
-        self.iconbitmap('D://nlp projects/cvproject/img/logo.ico')
+        self.iconbitmap('img/logo.ico')
         width = self.winfo_screenwidth()
         height = self.winfo_screenheight()
         self.geometry("%dx%d" % (width, height))
@@ -101,24 +101,24 @@ class FrontEnd(customtkinter.CTk):
         self.menu_frame = customtkinter.CTkFrame(self, width= width, height= 60)
         self.menu_frame.grid(row=0, column=0, columnspan=4, sticky="nsew")
 
-        my_image1 = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/1.png"),
-                                          dark_image=Image.open("D://nlp projects/cvproject/img/1.png"),
+        my_image1 = customtkinter.CTkImage(light_image=Image.open("img/1.png"),
+                                          dark_image=Image.open("img/1.png"),
                                           size=(40, 40))
         self.menu_button_1 = customtkinter.CTkButton(self.menu_frame, fg_color=("#dbdbdb","#2b2b2b"),
                                                         text_color= ("#2b2b2b", "white"),
                                                         image=my_image1,
                                                         hover_color="#C689C6", text= 'Editing',command=self.Editing_action) #command=self.sidebar_button_event
         self.menu_button_1.grid(row=0, column=0, padx=20, pady=10, sticky="nsew")
-        my_image2 = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/3.png"),
-                                           dark_image=Image.open("D://nlp projects/cvproject/img/3.png"),
+        my_image2 = customtkinter.CTkImage(light_image=Image.open("img/3.png"),
+                                           dark_image=Image.open("img/3.png"),
                                            size=(40, 40))
         self.menu_button_2 = customtkinter.CTkButton(self.menu_frame, fg_color=("#dbdbdb","#2b2b2b"),
                                                      image=my_image2,
                                                      text_color= ("#2b2b2b", "white"),
                                                         hover_color="#7FB77E", text= 'Perspective transform', command=self.Perspective_action)
         self.menu_button_2.grid(row=0, column=1, padx=20, pady=10)
-        my_image3 = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/4.png"),
-                                           dark_image=Image.open("D://nlp projects/cvproject/img/4.png"),
+        my_image3 = customtkinter.CTkImage(light_image=Image.open("img/4.png"),
+                                           dark_image=Image.open("img/4.png"),
                                            size=(40, 40))
         self.menu_button_3 = customtkinter.CTkButton(self.menu_frame, fg_color=("#dbdbdb","#2b2b2b"),
                                                      image=my_image3,
@@ -148,8 +148,8 @@ class FrontEnd(customtkinter.CTk):
         self.button.grid( column=1 , row=2, sticky='s')
         self.button.grid_anchor('center')
 
-        my_imagesb2 = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/16.png"),
-                                            dark_image=Image.open("D://nlp projects/cvproject/img/16.png"),
+        my_imagesb2 = customtkinter.CTkImage(light_image=Image.open("img/16.png"),
+                                            dark_image=Image.open("img/16.png"),
                                             size=(40, 40))
         self.button2 = customtkinter.CTkButton(self.canvas_frame, fg_color=("#dbdbdb", "#2b2b2b"),
                                                image=my_imagesb2,
@@ -357,8 +357,8 @@ class FrontEnd(customtkinter.CTk):
         self.label.grid(row=0, column=0,sticky="nsew")
 
         #Rotate
-        my_imager = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/9.png"),
-                                           dark_image=Image.open("D://nlp projects/cvproject/img/9.png"),
+        my_imager = customtkinter.CTkImage(light_image=Image.open("img/9.png"),
+                                           dark_image=Image.open("img/9.png"),
                                            size=(50, 50))
         self.rotate = customtkinter.CTkLabel(self.sidebar_frame, text="Rotate",
                                            image=my_imager,
@@ -375,8 +375,8 @@ class FrontEnd(customtkinter.CTk):
         self.slider_rotate.grid(row=5, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
 
         #Scale
-        my_images = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/6.png"),
-                                           dark_image=Image.open("D://nlp projects/cvproject/img/6.png"),
+        my_images = customtkinter.CTkImage(light_image=Image.open("img/6.png"),
+                                           dark_image=Image.open("img/6.png"),
                                            size=(50, 50))
         self.scale = customtkinter.CTkLabel(self.sidebar_frame, text="Scale",
                                            image=my_images,
@@ -393,8 +393,8 @@ class FrontEnd(customtkinter.CTk):
         self.slider_scale.grid(row=7, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
 
         #translation
-        my_imaget = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/8.png"),
-                                           dark_image=Image.open("D://nlp projects/cvproject/img/8.png"),
+        my_imaget = customtkinter.CTkImage(light_image=Image.open("img/8.png"),
+                                           dark_image=Image.open("img/8.png"),
                                            size=(50, 50))
         self.trans = customtkinter.CTkLabel(self.sidebar_frame, text="Translate",
                                            image=my_imaget,
@@ -468,8 +468,8 @@ class FrontEnd(customtkinter.CTk):
                                                  font=customtkinter.CTkFont(size=20, weight="bold"))
         self.label.grid(row=0, column=0,sticky="nsew")
         #warp
-        my_imagew = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/10.png"),
-                                           dark_image=Image.open("D://nlp projects/cvproject/img/10.png"),
+        my_imagew = customtkinter.CTkImage(light_image=Image.open("img/10.png"),
+                                           dark_image=Image.open("img/10.png"),
                                            size=(50, 50))
 
         self.warp = customtkinter.CTkLabel(self.sidebar_frame, text="wrap",
@@ -511,8 +511,8 @@ class FrontEnd(customtkinter.CTk):
                                             font=customtkinter.CTkFont(size=18, weight="bold"))
         self.skew.grid(row=11, column=0, pady=20, sticky="nsew")
 
-        my_imagesx = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/10.png"),
-                                           dark_image=Image.open("D://nlp projects/cvproject/img/10.png"),
+        my_imagesx = customtkinter.CTkImage(light_image=Image.open("img/10.png"),
+                                           dark_image=Image.open("img/10.png"),
                                            size=(50, 50))
         self.skewx = customtkinter.CTkLabel(self.sidebar_frame, text="skewX",
                                             image=my_imagesx,
@@ -528,8 +528,8 @@ class FrontEnd(customtkinter.CTk):
         self.slider_skewx.set(output_value=0)
         self.slider_skewx.grid(row=13, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
 
-        my_imagesy = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/11.png"),
-                                            dark_image=Image.open("D://nlp projects/cvproject/img/11.png"),
+        my_imagesy = customtkinter.CTkImage(light_image=Image.open("img/11.png"),
+                                            dark_image=Image.open("img/11.png"),
                                             size=(50, 50))
         self.skewy = customtkinter.CTkLabel(self.sidebar_frame, text="skewY",
                                             image=my_imagesy,
@@ -659,8 +659,8 @@ class FrontEnd(customtkinter.CTk):
         self.canvas.bind("<ButtonPress>", self.start_draw)
         self.canvas.bind("<B1-Motion>", self.draw)
 
-        my_imagep = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/14.png"),
-                                            dark_image=Image.open("D://nlp projects/cvproject/img/14.png"),
+        my_imagep = customtkinter.CTkImage(light_image=Image.open("img/14.png"),
+                                            dark_image=Image.open("img/14.png"),
                                             size=(40, 40))
         self.draw_color_button = customtkinter.CTkButton(
             self.sidebar_frame, text="Pick A Color",
@@ -683,8 +683,8 @@ class FrontEnd(customtkinter.CTk):
         self.slider_brushThickness.set(output_value=0)
         self.slider_brushThickness.grid(row=4, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
 
-        my_imageer = customtkinter.CTkImage(light_image=Image.open("D://nlp projects/cvproject/img/13.png"),
-                                           dark_image=Image.open("D://nlp projects/cvproject/img/13.png"),
+        my_imageer = customtkinter.CTkImage(light_image=Image.open("img/13.png"),
+                                           dark_image=Image.open("img/13.png"),
                                            size=(50, 50))
         self.eraser = customtkinter.CTkLabel(self.sidebar_frame, text="Eraser",
                                             image=my_imageer,
