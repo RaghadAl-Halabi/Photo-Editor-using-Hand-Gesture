@@ -1,3 +1,4 @@
+from collections import namedtuple
 from tkinter import (ttk,Tk,PhotoImage,Canvas, filedialog, colorchooser,RIDGE,
                      GROOVE,ROUND,Scale,HORIZONTAL, Label, Frame)
 import cv2 as cv
@@ -316,7 +317,7 @@ class Processing:
 
         # Background Removal based on the moving objects
         fgbg.setDetectShadows(False)
-        fgmask = fgbg.apply(thresholdedImg, 0.05)
+        fgmask = fgbg.apply(thresholdedImg, 0)
         foreground = cv.bitwise_and(thresholdedImg, thresholdedImg, mask=fgmask)
         # cv.imshow('foreground', foreground)
 
@@ -343,7 +344,8 @@ class Processing:
         # cv.imshow('mergedModel', mergedModel)
         return mergedModel
 
-    def preparePreGesturesProcessing(self, model, frame):
+    def preparePreGesturesProcessing(self, model, frame, farthest_point = (0,0)):
+        global translate, rotate, scale, stop
         # Getting the contours and convex hull
         # skinMask1 = copy.deepcopy(image)
         contours, hand = self.getMaxCon(model, frame)
@@ -354,6 +356,7 @@ class Processing:
         else:
             pass
 
+        prev_point = farthest_point
         farthest_point, res_frame = self.findFarPoint(res_frame, cx, cy, defects, hand)
         # cv.imshow("farthest_point", res_frame)
 
@@ -361,14 +364,15 @@ class Processing:
             cv.circle(res_frame, (cx, cy), 5, (0, 255, 0), 2)
         else:
             pass
-        gestureOn = self.checkGestureOn()
-        if (not gestureOn):
-            translate, rotate, scale, stop = self.recognizeGestures(num_def)
-            translate, rotate, scale, stop = self.implementGesture(frame, hand, num_def)
-        return res_frame
+        # gestureOn = self.checkGestureOn()
+        # if (not gestureOn):
+        translate, rotate, scale, stop = self.recognizeGestures(num_def)
+        return res_frame, hand, defects, num_def, (cx, cy), prev_point, farthest_point
 
 
     def recognizeGestures(self, num_def):
+        print(num_def)
+        global translate, rotate, scale, stop
         t, r, s, st = translate, rotate, scale, stop
         if num_def == 0:
             t = False
@@ -397,6 +401,7 @@ class Processing:
         return t, r, s, st
 
     def checkGestureOn(self):
+        global translate, rotate, scale, stop
         if (translate):
             return True
         elif (rotate):
@@ -406,33 +411,9 @@ class Processing:
         else:
             return False
 
-    def implementGesture(self, frame, hand, num_def):
-        tt, r, s, st = translate, rotate, scale, stop
-
-        try:
-            if translate:
-                t, r, s, st = self.recognizeGestures(num_def)
-                if (st): return t, r, s, st
-                cv.putText(frame, "2", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv.LINE_AA)
-
-            elif rotate:
-                t, r, s, st = self.recognizeGestures(num_def)
-                if (st): return t, r, s, st
-                cv.putText(frame, "3", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv.LINE_AA)
-
-            elif scale:
-                t, r, s, st = self.recognizeGestures(num_def)
-                if (st): return t, r, s, st
-                cv.putText(frame, "4", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv.LINE_AA)
-
-            else: return t, r, s, st
-            return t, r, s, st
-
-        except:
-            print("You moved the hand too fast or take it out of range of vision of the camera")
-            return t, r, s, st
 
 class FrontEnd(customtkinter.CTk):
+
     def splash_screen(self):
         w = Tk()
 
@@ -609,7 +590,9 @@ class FrontEnd(customtkinter.CTk):
         cv.imshow('skinForegroundModel', skinForegroundModel)
 
         # Getting the contours and convex hull
-        result = self.processing.preparePreGesturesProcessing(skinForegroundModel, frame)
+        result, hand, defects, num_def, (cx, cy), prev_point, farthest_point = self.processing.preparePreGesturesProcessing(skinForegroundModel, frame)
+
+        self.implementGesture(result, hand, defects, num_def, (cx, cy), prev_point, farthest_point)
 
 
         ''' 
@@ -751,7 +734,9 @@ class FrontEnd(customtkinter.CTk):
             self.translation_start_y = event.y
 
     def translation(self, event=None):
+        print("Hiiii")
         if self.switch_var.get():
+            print("helloooooo")
             image = self.edited_image.copy()
             num_rows, num_cols = self.edited_image.shape[:2]
             self.translation_matrix = np.float32([[1, 0, event.x* self.ratio-(num_cols/2) ], [0, 1, event.y* self.ratio-(num_rows/2)]])
@@ -762,6 +747,7 @@ class FrontEnd(customtkinter.CTk):
             # cv.imshow('fi', self.filtered_image)
             self.translation_start_x = event.x
             self.translation_start_y = event.y
+            print("hellooooo2")
 
     def rotate_action(self, value):
         num_rows, num_cols = self.edited_image.shape[:2]
@@ -1130,6 +1116,39 @@ class FrontEnd(customtkinter.CTk):
         self.canvas.config(width= new_width-4, height= new_height-4)
         self.canvas.create_image(
             new_width /2, new_height/2 , image =self.new_image, anchor="center")
+
+    def implementGesture(self, result, hand, defects, num_def, ctuple, prev_point, farthest_point):
+        global translate, rotate, scale, stop
+        t, r, s, st = translate, rotate, scale, stop
+        if translate:
+            t, r, s, st = self.processing.recognizeGestures(num_def)
+            if (st):
+                return t, r, s, st
+            cv.putText(result, "2", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv.LINE_AA)
+            print("translate1")
+            # self.switch_var.set(True)
+            self.switch_var = customtkinter.BooleanVar(value=True)
+            point = namedtuple('point', ['x', 'y'])
+            point.x = farthest_point[0] - prev_point[0]
+            point.y = farthest_point[1] - prev_point[1]
+            self.translation(point)
+            print("translate2")
+
+        elif rotate:
+            t, r, s, st = self.processing.recognizeGestures(num_def)
+            if (st): return t, r, s, st
+            cv.putText(result, "3", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv.LINE_AA)
+
+        elif scale:
+            t, r, s, st = self.processing.recognizeGestures(num_def)
+            if (st): return t, r, s, st
+            cv.putText(result, "4", (0, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv.LINE_AA)
+        else:
+            return t, r, s, st
+
+
+
+
 
 
 mainWindow = FrontEnd()
