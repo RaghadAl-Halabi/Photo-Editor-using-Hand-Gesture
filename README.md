@@ -1,6 +1,6 @@
 # Photo-Editor-using-Hand-Gesture
 
-A Desktop Application uses hand gestures to edit images.
+A Desktop Application that uses hand gestures to edit images.
 
 Through the program, an image is opened, modified, and then saved. This is done by using image processing techniques, taking into account different lighting conditions, so that the user enters a live video stream in real time through the computer camera, and within it hand gestures (movement) and hand positions (shape) are recognized as needed.
 
